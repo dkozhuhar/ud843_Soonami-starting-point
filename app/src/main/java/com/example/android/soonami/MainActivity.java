@@ -156,17 +156,24 @@ public class MainActivity extends AppCompatActivity {
             String jsonResponse = "";
             HttpURLConnection urlConnection = null;
             InputStream inputStream = null;
+            if (url == null) { return jsonResponse;}
             try {
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
                 urlConnection.setReadTimeout(10000 /* milliseconds */);
                 urlConnection.setConnectTimeout(15000 /* milliseconds */);
                 urlConnection.connect();
-                inputStream = urlConnection.getInputStream();
-                jsonResponse = readFromStream(inputStream);
+                int httpResponseCode = urlConnection.getResponseCode();
+                if (httpResponseCode == 200) {
+                    inputStream = urlConnection.getInputStream();
+                    jsonResponse = readFromStream(inputStream);
+                } else {
+                    Log.e("MainActivity","Http response code: " + httpResponseCode);
+                }
             } catch (IOException e) {
-                // TODO: Handle the exception
+                Log.e("mainActivity", "IOexception thrown",e);
             } finally {
+
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
@@ -201,26 +208,28 @@ public class MainActivity extends AppCompatActivity {
          * about the first earthquake from the input earthquakeJSON string.
          */
         private Event extractFeatureFromJson(String earthquakeJSON) {
-            try {
-                JSONObject baseJsonResponse = new JSONObject(earthquakeJSON);
-                JSONArray featureArray = baseJsonResponse.getJSONArray("features");
+            if (!earthquakeJSON.equals("")) {
+                try {
+                    JSONObject baseJsonResponse = new JSONObject(earthquakeJSON);
+                    JSONArray featureArray = baseJsonResponse.getJSONArray("features");
 
-                // If there are results in the features array
-                if (featureArray.length() > 0) {
-                    // Extract out the first feature (which is an earthquake)
-                    JSONObject firstFeature = featureArray.getJSONObject(0);
-                    JSONObject properties = firstFeature.getJSONObject("properties");
+                    // If there are results in the features array
+                    if (featureArray.length() > 0) {
+                        // Extract out the first feature (which is an earthquake)
+                        JSONObject firstFeature = featureArray.getJSONObject(0);
+                        JSONObject properties = firstFeature.getJSONObject("properties");
 
-                    // Extract out the title, time, and tsunami values
-                    String title = properties.getString("title");
-                    long time = properties.getLong("time");
-                    int tsunamiAlert = properties.getInt("tsunami");
+                        // Extract out the title, time, and tsunami values
+                        String title = properties.getString("title");
+                        long time = properties.getLong("time");
+                        int tsunamiAlert = properties.getInt("tsunami");
 
-                    // Create a new {@link Event} object
-                    return new Event(title, time, tsunamiAlert);
+                        // Create a new {@link Event} object
+                        return new Event(title, time, tsunamiAlert);
+                    }
+                } catch (JSONException e) {
+                    Log.e(LOG_TAG, "Problem parsing the earthquake JSON results", e);
                 }
-            } catch (JSONException e) {
-                Log.e(LOG_TAG, "Problem parsing the earthquake JSON results", e);
             }
             return null;
         }
